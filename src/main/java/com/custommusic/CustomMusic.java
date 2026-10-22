@@ -1,65 +1,15 @@
 package com.custommusic;
 
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundSource;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.loading.FMLPaths;
-import org.lwjgl.glfw.GLFW;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-/** Tout ce qui touche au client (touches, menu, lecture). */
-public class ClientMusic {
-    private static final KeyMapping NEXT = new KeyMapping("key.custommusic.next", GLFW.GLFW_KEY_N, "key.categories.custommusic");
-    private static final KeyMapping PAUSE = new KeyMapping("key.custommusic.pause", GLFW.GLFW_KEY_M, "key.categories.custommusic");
-    private static final KeyMapping MENU = new KeyMapping("key.custommusic.menu", GLFW.GLFW_KEY_K, "key.categories.custommusic");
-    private static MusicPlayer player;
-
-    public static void init(IEventBus modBus) {
-        Path dir = FMLPaths.GAMEDIR.get().resolve("custom_music");
-        try { Files.createDirectories(dir); } catch (Exception ignored) {}
-        player = new MusicPlayer(dir);
-
-        modBus.addListener((RegisterKeyMappingsEvent e) -> {
-            e.register(NEXT);
-            e.register(PAUSE);
-            e.register(MENU);
-        });
-        MinecraftForge.EVENT_BUS.addListener(ClientMusic::onTick);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(player::shutdown));
-        player.start();
-    }
-
-    private static void onTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        Minecraft mc = Minecraft.getInstance();
-        mc.getMusicManager().stopPlaying();
-
-        float master = mc.options.getSoundSourceVolume(SoundSource.MASTER);
-        float music = mc.options.getSoundSourceVolume(SoundSource.MUSIC);
-        player.setVolume(master * music);
-
-        while (MENU.consumeClick()) {
-            if (mc.screen == null) mc.setScreen(new MusicScreen(player));
-        }
-        while (NEXT.consumeClick()) {
-            player.next();
-            msg(mc, "\u00a7a\u266a " + player.currentName());
-        }
-        while (PAUSE.consumeClick()) {
-            player.togglePause();
-            msg(mc, player.isPaused() ? "\u00a7e\u266a Pause" : "\u00a7a\u266a " + player.currentName());
-        }
-    }
-
-    private static void msg(Minecraft mc, String s) {
-        if (mc.player != null) mc.player.displayClientMessage(Component.literal(s), true);
+@Mod("custommusic")
+public class CustomMusic {
+    public CustomMusic() {
+        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientMusic.init(modBus));
     }
 }

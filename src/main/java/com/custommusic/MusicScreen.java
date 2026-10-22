@@ -1,60 +1,65 @@
 package com.custommusic;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundSource;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.loading.FMLPaths;
+import org.lwjgl.glfw.GLFW;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
-public class MusicScreen extends Screen {
-    private static final int PER_PAGE = 8;
-    private final MusicPlayer player;
-    private List<Path> files;
-    private int page = 0;
+/** Tout ce qui touche au client (touches, menu, lecture). */
+public class ClientMusic {
+    private static final KeyMapping NEXT = new KeyMapping("key.custommusic.next", GLFW.GLFW_KEY_N, "key.categories.custommusic");
+    private static final KeyMapping PAUSE = new KeyMapping("key.custommusic.pause", GLFW.GLFW_KEY_M, "key.categories.custommusic");
+    private static final KeyMapping MENU = new KeyMapping("key.custommusic.menu", GLFW.GLFW_KEY_K, "key.categories.custommusic");
+    private static MusicPlayer player;
 
-    public MusicScreen(MusicPlayer player) {
-        super(Component.literal("Custom Music"));
-        this.player = player;
+    public static void init(IEventBus modBus) {
+        Path dir = FMLPaths.GAMEDIR.get().resolve("custom_music");
+        try { Files.createDirectories(dir); } catch (Exception ignored) {}
+        player = new MusicPlayer(dir);
+
+        modBus.addListener((RegisterKeyMappingsEvent e) -> {
+            e.register(NEXT);
+            e.register(PAUSE);
+            e.register(MENU);
+        });
+        MinecraftForge.EVENT_BUS.addListener(ClientMusic::onTick);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(player::shutdown));
+        player.start();
     }
 
-    @Override
-    protected void init() {
-        files = player.list();
-        int pages = Math.max(1, (files.size() + PER_PAGE - 1) / PER_PAGE);
-        if (page >= pages) page = pages - 1;
-        int x = this.width / 2 - 150;
-        int start = page * PER_PAGE;
-        for (int i = 0; i < PER_PAGE && start + i < files.size(); i++) {
-            Path f = files.get(start + i);
-            String name = f.getFileName().toString().replaceFirst("(?i)\\.mp3$", "");
-            name = this.font.plainSubstrByWidth(name, 280);
-            this.addRenderableWidget(Button.builder(Component.literal(name), b -> player.playNow(f))
-                    .bounds(x, 50 + i * 24, 300, 20).build());
+    private static void onTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Minecraft mc = Minecraft.getInstance();
+        mc.getMusicManager().stopPlaying();
+
+        float master = mc.options.getSoundSourceVolume(SoundSource.MASTER);
+        float music = mc.options.getSoundSourceVolume(SoundSource.MUSIC);
+        player.setVolume(master * music);
+
+        while (MENU.consumeClick()) {
+            if (mc.screen == null) mc.setScreen(new MusicScreen(player));
         }
-        int y = this.height - 30;
-        int bx = this.width / 2 - 147;
-        this.addRenderableWidget(Button.builder(Component.literal("<"), b -> { if (page > 0) { page--; rebuildWidgets(); } })
-                .bounds(bx, y, 40, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal(">"), b -> { if (page < pages - 1) { page++; rebuildWidgets(); } })
-                .bounds(bx + 45, y, 40, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Pause / Reprendre"), b -> player.togglePause())
-                .bounds(bx + 90, y, 110, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Suivant"), b -> player.next())
-                .bounds(bx + 205, y, 90, 20).build());
+        while (NEXT.consumeClick()) {
+            player.next();
+            msg(mc, "\u00a7a\u266a " + player.currentName());
+        }
+        while (PAUSE.consumeClick()) {
+            player.togglePause();
+            msg(mc, player.isPaused() ? "\u00a7e\u266a Pause" : "\u00a7a\u266a " + player.currentName());
+        }
     }
 
-    @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(g);
-        super.render(g, mouseX, mouseY, partialTick);
-        g.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFFFFF);
-        String cur = player.currentName();
-        String text = files.isEmpty()
-                ? "Aucun MP3 dans le dossier custom_music"
-                : (cur.isEmpty() ? "Clique sur une musique" : "En cours : " + cur);
-        g.drawCenteredString(this.font, Component.literal(this.font.plainSubstrByWidth(text, this.width - 20)),
-                this.width / 2, 30, 0xAAAAAA);
+    private static void msg(Minecraft mc, String s) {
+        if (mc.player != null) mc.player.displayClientMessage(Component.literal(s), true);
     }
 }

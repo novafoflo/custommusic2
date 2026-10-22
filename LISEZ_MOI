@@ -1,0 +1,15 @@
+CUSTOM MUSIC - Forge 1.20.1 - un .txt par fichier, contenu pur (Ctrl+A, Ctrl+C, colle).
+Nouveau depot GitHub (ex: custommusic-120). Cree .github/workflows/build.yml EN DERNIER.
+Nom du fichier GitHub = nom du .txt, avec __ a la place de /, sans le numero ni le .txt final.
+
+01_build.gradle.txt  ->  build.gradle
+02_settings.gradle.txt  ->  settings.gradle
+03_.github__workflows__build.yml.txt  ->  .github/workflows/build.yml
+04_src__main__resources__META-INF__mods.toml.txt  ->  src/main/resources/META-INF/mods.toml
+05_src__main__resources__pack.mcmeta.txt  ->  src/main/resources/pack.mcmeta
+06_src__main__resources__assets__custommusic__lang__en_us.json.txt  ->  src/main/resources/assets/custommusic/lang/en_us.json
+07_src__main__resources__assets__custommusic__lang__fr_fr.json.txt  ->  src/main/resources/assets/custommusic/lang/fr_fr.json
+08_src__main__java__com__custommusic__CustomMusic.java.txt  ->  src/main/java/com/custommusic/CustomMusic.java
+09_src__main__java__com__custommusic__ClientMusic.java.txt  ->  src/main/java/com/custommusic/ClientMusic.java
+10_src__main__java__com__custommusic__MusicPlayer.java.txt  ->  src/main/java/com/custommusic/MusicPlayer.java
+11_src__main__java__com__custommusic__MusicScreen.java.txt  ->  src/main/java/com/custommusic/MusicScreen.java
